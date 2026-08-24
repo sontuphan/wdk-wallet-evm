@@ -191,7 +191,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
   /**
    * Sends a transaction.
    *
-   * @param {EvmTransaction | string} tx - The transaction.
+   * @param {EvmTransaction | string} tx - The transaction, or a signed raw transaction as a hex string.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
@@ -220,7 +220,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @param {EvmTransaction | string} tx - The transaction.
+   * @param {EvmTransaction | string} tx - The transaction, or a signed raw transaction as a hex string.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx) {
