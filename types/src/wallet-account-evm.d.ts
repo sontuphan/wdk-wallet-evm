@@ -93,6 +93,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      * @returns {Promise<TransactionResult>} The transaction's result.
      * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {ValueError} If the transaction mixes fee fields that its type doesn't support, or a type 3 transaction omits `maxFeePerBlobGas`.
      */
     sendTransaction(tx: EvmTransaction | string): Promise<TransactionResult>;
     /**
