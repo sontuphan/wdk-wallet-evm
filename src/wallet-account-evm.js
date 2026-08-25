@@ -191,7 +191,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
   /**
    * Sends a transaction.
    *
-   * @param {EvmTransaction | string} tx - The transaction.
+   * @param {EvmTransaction | string} tx - The transaction, or a signed raw transaction as a hex string.
    * @returns {Promise<TransactionResult>} The transaction's result.
    * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
    */
@@ -203,6 +203,12 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
     if (this._config.transactionMaxFee !== undefined && fee > this._config.transactionMaxFee) {
       throw new Error('Exceeded maximum fee cost for transaction operation.')
     }
+
+    if (typeof tx === 'string') {
+      const hash = await this._provider.send('eth_sendRawTransaction', [tx])
+      return { hash, fee }
+    }
+
     // Build, sign and broadcast raw transaction using the signer
     const from = await this.getAddress()
     const unsignedTx = await populateTransactionEvm(this._provider, from, tx)
@@ -214,7 +220,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
   /**
    * Quotes the costs of a send transaction operation.
    *
-   * @param {EvmTransaction | string} tx - The transaction.
+   * @param {EvmTransaction | string} tx - The transaction, or a signed raw transaction as a hex string.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    */
   async quoteSendTransaction (tx) {

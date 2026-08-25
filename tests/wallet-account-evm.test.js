@@ -30,6 +30,7 @@ const ACCOUNT = {
 }
 
 const DUMMY_TX_HASH = '0xdef456abc123def456abc123def456abc123def456abc123def456abc123def4'
+const SIGNED_TRANSACTION = '0x02f86e827a6980843b9aca00847735940082520894a460aebce0d3a4becad8ccf9d6d4861296c503bd8203e880c080a0189acf1d3170de712fd346182a77b08ccaa1317cdd13daf386f1405d52148171a04a83f7c7df7f258344e1726ac5b94f53fb415f0e41a58399b5031940b293b9ec'
 
 // Fee constants implied by the mocked rpc responses below:
 // maxFeePerGas = 2 * baseFee (1 gwei) + priorityFee (1 gwei) = 3 gwei.
@@ -222,8 +223,6 @@ describe('WalletAccountEvm', () => {
       chainId: 31_337n
     }
 
-    const SIGNED_TRANSACTION = '0x02f86e827a6980843b9aca00847735940082520894a460aebce0d3a4becad8ccf9d6d4861296c503bd8203e880c080a0189acf1d3170de712fd346182a77b08ccaa1317cdd13daf386f1405d52148171a04a83f7c7df7f258344e1726ac5b94f53fb415f0e41a58399b5031940b293b9ec'
-
     test('should sign a transaction and return a valid hex string', async () => {
       const accountWithoutProvider = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
 
@@ -265,6 +264,14 @@ describe('WalletAccountEvm', () => {
   })
 
   describe('sendTransaction', () => {
+    test('should broadcast a signed transaction unchanged', async () => {
+      const { hash, fee } = await account.sendTransaction(SIGNED_TRANSACTION)
+
+      expect(hash).toBe(DUMMY_TX_HASH)
+      expect(fee).toBe(MOCKED_FEE)
+      expect(provider.sentRawTransactions).toEqual([SIGNED_TRANSACTION])
+    })
+
     test('should sign and broadcast a transaction', async () => {
       const TRANSACTION = {
         to: SPENDER_ADDRESS,
@@ -292,6 +299,18 @@ describe('WalletAccountEvm', () => {
 
       await expect(account.sendTransaction({ to: SPENDER_ADDRESS, value: 1_000 }))
         .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+    })
+
+    test('should not broadcast a signed transaction that exceeds the transaction max fee configuration', async () => {
+      const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"), {
+        provider,
+        transactionMaxFee: 0
+      })
+
+      await expect(account.sendTransaction(SIGNED_TRANSACTION))
+        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+
+      expect(provider.sentRawTransactions).toEqual([])
     })
 
     test('should throw if the account is not connected to a provider', async () => {
