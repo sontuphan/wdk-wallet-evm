@@ -14,7 +14,7 @@
 
 'use strict'
 
-import { WalletAccountReadOnly, NoSuchElementError, ValueError } from '@tetherto/wdk-wallet'
+import { WalletAccountReadOnly, NoSuchElementError, ProviderRequiredError, ValueError } from '@tetherto/wdk-wallet'
 
 import { BrowserProvider, Contract, Interface, isError, isHexString, JsonRpcProvider, Network, Signature, toQuantity, verifyMessage, verifyTypedData } from 'ethers'
 
@@ -156,10 +156,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    * Returns the account's eth balance.
    *
    * @returns {Promise<bigint>} The eth balance (in weis).
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getBalance () {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to retrieve balances.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to retrieve balances.')
     }
 
     const address = await this.getAddress()
@@ -174,10 +175,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    *
    * @param {string} tokenAddress - The smart contract address of the token.
    * @returns {Promise<bigint>} The token balance (in base unit).
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getTokenBalance (tokenAddress) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to retrieve token balances.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to retrieve token balances.')
     }
 
     const address = await this.getAddress()
@@ -194,10 +196,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    *
    * @param {string[]} tokenAddresses - The smart contract addresses of the tokens.
    * @returns {Promise<Record<string, bigint>>} A mapping of token addresses to their balances (in base units).
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getTokenBalances (tokenAddresses) {
     if (!this._provider) {
-      throw new Error(
+      throw new ProviderRequiredError(
         'The wallet must be connected to a provider to retrieve token balances.'
       )
     }
@@ -231,10 +234,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    *
    * @param {EvmTransaction} tx - The transaction.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async quoteSendTransaction (tx) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to quote send transaction operations.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to quote send transaction operations.')
     }
 
     const from = await this.getAddress()
@@ -255,10 +259,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    *
    * @param {EvmTransferOptions} options - The transfer's options.
    * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async quoteTransfer (options) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to quote transfer operations.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to quote transfer operations.')
     }
 
     const tx = await WalletAccountReadOnlyEvm._getTransferTransaction(options)
@@ -274,10 +279,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The raw ethers receipt remains available on its `receipt` property.
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<EvmTransactionReceipt | null>} – The receipt, or null if the transaction has not been included in a block yet.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getTransactionReceipt (hash) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to fetch transaction receipts.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to fetch transaction receipts.')
     }
 
     return await this._provider.getTransactionReceipt(hash)
@@ -288,12 +294,13 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    *
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<TransactionReceipt & EvmTransactionDetails>} The normalized receipt.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    * @throws {ValueError} If the hash is not a valid transaction hash.
    * @throws {NoSuchElementError} If no transaction has been found for the given hash.
    */
   async getTransaction (hash) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to fetch transactions.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to fetch transactions.')
     }
 
     if (!isHexString(hash, 32)) {
@@ -397,10 +404,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    * @param {string} token The token's address.
    * @param {string} spender The spender's address.
    * @returns {Promise<bigint>} The allowance.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getAllowance (token, spender) {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to retrieve allowances.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to retrieve allowances.')
     }
 
     const address = await this.getAddress()
@@ -443,10 +451,11 @@ export default class WalletAccountReadOnlyEvm extends WalletAccountReadOnly {
    * Checks if this account has an active ERC-7702 delegation.
    *
    * @returns {Promise<DelegationInfo>} The delegation info.
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getDelegation () {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to check delegation.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to check delegation.')
     }
 
     const address = await this.getAddress()

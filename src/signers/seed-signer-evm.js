@@ -16,7 +16,7 @@
 import * as bip39 from 'bip39'
 
 import MemorySafeHDNodeWallet from '../memory-safe/hd-node-wallet.js'
-import { ISigner, NotImplementedError } from '@tetherto/wdk-wallet'
+import { ISigner, InvalidSignerError, NotImplementedError, ValueError } from '@tetherto/wdk-wallet'
 
 const BIP_44_ETH_DERIVATION_PATH_PREFIX = "m/44'/60'"
 
@@ -25,7 +25,6 @@ const DEFAULT_ACCOUNT_PATH = "0'/0/0"
 
 /** @typedef {import('../utils/tx-populator-evm.js').UnsignedEvmTransaction} UnsignedEvmTransaction */
 /** @typedef {import('@tetherto/wdk-wallet').ISigner} ISigner */
-/** @typedef {import('@tetherto/wdk-wallet').InvalidSignerError} InvalidSignerError */
 /** @typedef {import('@tetherto/wdk-wallet').KeyPair} KeyPair */
 /** @typedef {import('ethers').AuthorizationRequest} AuthorizationRequest */
 /** @typedef {import('ethers').Authorization} Authorization */
@@ -163,24 +162,24 @@ export default class SeedSignerEvm extends ISignerEvm {
    *
    * @param {string|Uint8Array|null} seed - BIP-39 mnemonic or seed bytes. Omit when providing `opts.root`.
    * @param {SeedSignerEvmOpts} [opts] - Construction options for root reuse, direct child derivation or path definition (default is index 0).
-     * @throws {Error} If neither a seed nor a root is provided, or if both are provided.
-     * @throws {Error} If a seed is provided but is not a valid BIP-39 mnemonic.
+   * @throws {ValueError} If neither a seed nor a root is provided, or if both are provided.
+   * @throws {ValueError} If a seed is provided but is not a valid BIP-39 mnemonic.
    */
   constructor (seed, opts = {}) {
     super()
 
     // If a root is provided, do not expect a seed
     if (opts.root && seed) {
-      throw new Error('Provide either a seed or a root, not both.')
+      throw new ValueError('Provide either a seed or a root, not both.')
     }
 
     if (!opts.root && !seed) {
-      throw new Error('Seed or root is required.')
+      throw new ValueError('Seed or root is required.')
     }
 
     if (typeof seed === 'string') {
       if (!bip39.validateMnemonic(seed)) {
-        throw new Error('The seed phrase is invalid.')
+        throw new ValueError('The seed phrase is invalid.')
       }
       seed = bip39.mnemonicToSeedSync(seed)
     }
@@ -251,11 +250,11 @@ export default class SeedSignerEvm extends ISignerEvm {
    * Derive a child signer using the provided relative path (e.g. "0'/0/0").
    * @param {string} relPath
    * @returns {Promise<SeedSignerEvm>}
-   * @throws {Error} If called on a derived child signer, which does not retain the root.
+   * @throws {InvalidSignerError} If called on a derived child signer, which does not retain the root.
    */
   async derive (relPath) {
     if (!this._root) {
-      throw new Error('Cannot derive: this signer has no root (it is a derived child or has been disposed).')
+      throw new InvalidSignerError('Cannot derive: this signer has no root (it is a derived child or has been disposed).')
     }
     return new SeedSignerEvm(null, { root: this._root, path: relPath, isChild: true })
   }

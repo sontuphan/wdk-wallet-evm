@@ -80,5 +80,6 @@ export type AuthorizationLike = import("ethers").AuthorizationLike;
  * @param {string} from - The sender address.
  * @param {UnsignedEvmTransaction} tx - The partial transaction to populate.
  * @returns {Promise<UnsignedEvmTransaction>} The fully populated unsigned transaction.
+ * @throws {ValueError} If the transaction mixes fee fields that its type doesn't support, or a type 3 transaction omits `maxFeePerBlobGas`.
  */
 export function populateTransactionEvm(provider: Provider, from: string, tx: UnsignedEvmTransaction): Promise<UnsignedEvmTransaction>;

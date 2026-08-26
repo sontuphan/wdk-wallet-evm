@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, jest, test } from '@jest/globals'
 
 import * as bip39 from 'bip39'
 
+import { MaximumFeeExceededError, ProviderRequiredError, ValueError } from '@tetherto/wdk-wallet'
+
 import { WalletAccountEvm, WalletAccountReadOnlyEvm } from '../index.js'
 import SeedSignerEvm from '../src/signers/seed-signer-evm.js'
 import PrivateKeySignerEvm from '../src/signers/private-key-signer-evm.js'
@@ -126,6 +128,9 @@ describe('WalletAccountEvm', () => {
     test('should throw if the seed phrase is invalid', () => {
       // eslint-disable-next-line no-new
       expect(() => { new WalletAccountEvm(INVALID_SEED_PHRASE, "0'/0/0") })
+        .toThrow(ValueError)
+      // eslint-disable-next-line no-new
+      expect(() => { new WalletAccountEvm(INVALID_SEED_PHRASE, "0'/0/0") })
         .toThrow('The seed phrase is invalid.')
     })
 
@@ -237,8 +242,10 @@ describe('WalletAccountEvm', () => {
         transactionMaxFee: 0
       })
 
-      await expect(account.signTransaction(TRANSACTION))
-        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      const promise = account.signTransaction(TRANSACTION)
+
+      await expect(promise).rejects.toThrow(MaximumFeeExceededError)
+      await expect(promise).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
     })
 
     test('should not enforce transaction max fee without a provider', async () => {
@@ -297,8 +304,10 @@ describe('WalletAccountEvm', () => {
         transactionMaxFee: 0
       })
 
-      await expect(account.sendTransaction({ to: SPENDER_ADDRESS, value: 1_000 }))
-        .rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
+      const promise = account.sendTransaction({ to: SPENDER_ADDRESS, value: 1_000 })
+
+      await expect(promise).rejects.toThrow(MaximumFeeExceededError)
+      await expect(promise).rejects.toThrow('Exceeded maximum fee cost for transaction operation.')
     })
 
     test('should not broadcast a signed transaction that exceeds the transaction max fee configuration', async () => {
@@ -316,8 +325,69 @@ describe('WalletAccountEvm', () => {
     test('should throw if the account is not connected to a provider', async () => {
       const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
 
-      await expect(account.sendTransaction({ }))
-        .rejects.toThrow('The wallet must be connected to a provider to send transactions.')
+      const promise = account.sendTransaction({ })
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to send transactions.')
+    })
+
+    test('should throw if an eip-1559 transaction also sets a gas price', async () => {
+      const promise = account.sendTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        gasPrice: 1_000_000_000,
+        maxFeePerGas: 2_000_000_000
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('eip-1559 transaction does not support gasPrice')
+    })
+
+    test('should throw if a legacy transaction sets eip-1559 fee fields', async () => {
+      const promise = account.sendTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        type: 0,
+        maxFeePerGas: 2_000_000_000
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('pre-eip-1559 transaction does not support maxFeePerGas/maxPriorityFeePerGas')
+    })
+
+    test('should throw if a blob transaction also sets a gas price', async () => {
+      const promise = account.sendTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        type: 3,
+        gasPrice: 1_000_000_000
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('blob transaction does not support gasPrice')
+    })
+
+    test('should throw if a blob transaction omits the max fee per blob gas', async () => {
+      const promise = account.sendTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        type: 3,
+        blobVersionedHashes: ['0x' + '01'.repeat(32)]
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('maxFeePerBlobGas is required for type 3 transactions')
+    })
+  })
+
+  describe('quoteSendTransaction', () => {
+    test('should throw if quoting a raw transaction without a provider', async () => {
+      const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
+
+      const promise = account.quoteSendTransaction('0xdeadbeef')
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to quote send transaction operations.')
     })
   })
 
@@ -350,15 +420,19 @@ describe('WalletAccountEvm', () => {
         { provider, transferMaxFee: 0 }
       )
 
-      await expect(account.transfer({ token: TOKEN_ADDRESS, recipient: SPENDER_ADDRESS, amount: 100 }))
-        .rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
+      const promise = account.transfer({ token: TOKEN_ADDRESS, recipient: SPENDER_ADDRESS, amount: 100 })
+
+      await expect(promise).rejects.toThrow(MaximumFeeExceededError)
+      await expect(promise).rejects.toThrow('Exceeded maximum fee cost for transfer operation.')
     })
 
     test('should throw if the account is not connected to a provider', async () => {
       const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
 
-      await expect(account.transfer({ }))
-        .rejects.toThrow('The wallet must be connected to a provider to transfer tokens.')
+      const promise = account.transfer({ })
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to transfer tokens.')
     })
   })
 
@@ -396,8 +470,10 @@ describe('WalletAccountEvm', () => {
         amount: AMOUNT
       }
 
-      await expect(account.approve(approveOptions))
-        .rejects.toThrow('USDT requires the current allowance to be reset to 0 before setting a new non-zero value.')
+      const promise = account.approve(approveOptions)
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('USDT requires the current allowance to be reset to 0 before setting a new non-zero value.')
     })
 
     test('should successfully approve a non-zero amount for USDT on mainnet when allowance is zero', async () => {
@@ -456,8 +532,10 @@ describe('WalletAccountEvm', () => {
         amount: AMOUNT
       }
 
-      await expect(accountWithoutProvider.approve(approveOptions))
-        .rejects.toThrow('The wallet must be connected to a provider to approve funds.')
+      const promise = accountWithoutProvider.approve(approveOptions)
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to approve funds.')
     })
   })
 
@@ -512,8 +590,10 @@ describe('WalletAccountEvm', () => {
     test('should throw if the account is not connected to a provider', async () => {
       const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
 
-      await expect(account.delegate(DELEGATE_CONTRACT_ADDRESS))
-        .rejects.toThrow('The wallet must be connected to a provider to delegate.')
+      const promise = account.delegate(DELEGATE_CONTRACT_ADDRESS)
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to delegate.')
     })
   })
 
@@ -532,8 +612,10 @@ describe('WalletAccountEvm', () => {
     test('should throw if the account is not connected to a provider', async () => {
       const account = new WalletAccountEvm(await new SeedSignerEvm(SEED_PHRASE).derive("0'/0/0"))
 
-      await expect(account.revokeDelegation())
-        .rejects.toThrow('The wallet must be connected to a provider to delegate.')
+      const promise = account.revokeDelegation()
+
+      await expect(promise).rejects.toThrow(ProviderRequiredError)
+      await expect(promise).rejects.toThrow('The wallet must be connected to a provider to delegate.')
     })
   })
 

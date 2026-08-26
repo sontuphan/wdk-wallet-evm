@@ -13,6 +13,8 @@
 // limitations under the License.
 'use strict'
 
+import { ValueError } from '@tetherto/wdk-wallet'
+
 import { Signature, toQuantity } from 'ethers'
 
 /** @typedef {import('ethers').Provider} Provider */
@@ -51,6 +53,7 @@ import { Signature, toQuantity } from 'ethers'
  * @param {string} from - The sender address.
  * @param {UnsignedEvmTransaction} tx - The partial transaction to populate.
  * @returns {Promise<UnsignedEvmTransaction>} The fully populated unsigned transaction.
+ * @throws {ValueError} If the transaction mixes fee fields that its type doesn't support, or a type 3 transaction omits `maxFeePerBlobGas`.
  */
 export async function populateTransactionEvm (provider, from, tx) {
   const net = await provider.getNetwork()
@@ -65,13 +68,13 @@ export async function populateTransactionEvm (provider, from, tx) {
   const explicitType = (tx.type != null) ? Number(tx.type) : null
 
   if ((explicitType === 2 || (explicitType == null && has1559)) && hasLegacy) {
-    throw new Error('eip-1559 transaction does not support gasPrice')
+    throw new ValueError('eip-1559 transaction does not support gasPrice')
   }
   if ((explicitType === 0 || explicitType === 1) && has1559) {
-    throw new Error('pre-eip-1559 transaction does not support maxFeePerGas/maxPriorityFeePerGas')
+    throw new ValueError('pre-eip-1559 transaction does not support maxFeePerGas/maxPriorityFeePerGas')
   }
   if ((explicitType === 3 || hasBlobs) && hasLegacy) {
-    throw new Error('blob transaction does not support gasPrice')
+    throw new ValueError('blob transaction does not support gasPrice')
   }
 
   const feeData = await provider.getFeeData()
@@ -132,7 +135,7 @@ export async function populateTransactionEvm (provider, from, tx) {
     populated.type = 3
     populated.maxFeePerGas = tx.maxFeePerGas ?? feeData.maxFeePerGas
     populated.maxPriorityFeePerGas = tx.maxPriorityFeePerGas ?? feeData.maxPriorityFeePerGas
-    if (tx.maxFeePerBlobGas == null) throw new Error('maxFeePerBlobGas is required for type 3 transactions')
+    if (tx.maxFeePerBlobGas == null) throw new ValueError('maxFeePerBlobGas is required for type 3 transactions')
     populated.maxFeePerBlobGas = tx.maxFeePerBlobGas
     if (tx.blobs != null) populated.blobs = tx.blobs
     if (tx.blobVersionedHashes != null) populated.blobVersionedHashes = tx.blobVersionedHashes

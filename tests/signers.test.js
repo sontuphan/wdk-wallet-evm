@@ -2,6 +2,8 @@ import * as bip39 from 'bip39'
 
 import { describe, expect, test } from '@jest/globals'
 
+import { InvalidSignerError, ValueError } from '@tetherto/wdk-wallet'
+
 import SeedSignerEvm from '../src/signers/seed-signer-evm.js'
 import PrivateKeySignerEvm from '../src/signers/private-key-signer-evm.js'
 
@@ -18,7 +20,16 @@ const EXPECTED_ADDRESS = '0x405005C7c4422390F4B334F64Cf20E0b767131d0'
 describe('SeedSignerEvm', () => {
   test('should throw if the seed phrase is invalid', () => {
     expect(() => { new SeedSignerEvm('invalid seed phrase') }) // eslint-disable-line no-new
+      .toThrow(ValueError)
+    expect(() => { new SeedSignerEvm('invalid seed phrase') }) // eslint-disable-line no-new
       .toThrow('The seed phrase is invalid.')
+  })
+
+  test('should throw if neither a seed nor a root is provided', () => {
+    expect(() => { new SeedSignerEvm() }) // eslint-disable-line no-new
+      .toThrow(ValueError)
+    expect(() => { new SeedSignerEvm() }) // eslint-disable-line no-new
+      .toThrow('Seed or root is required.')
   })
 
   test('should throw if the path is invalid', async () => {
@@ -29,6 +40,8 @@ describe('SeedSignerEvm', () => {
   test('should throw if both seed and root are provided', async () => {
     const root = new SeedSignerEvm(VALID_SEED_PHRASE)
     const child = await root.derive("0'/0/0")
+    expect(() => { new SeedSignerEvm(VALID_SEED_PHRASE, { root: child }) }) // eslint-disable-line no-new
+      .toThrow(ValueError)
     expect(() => { new SeedSignerEvm(VALID_SEED_PHRASE, { root: child }) }) // eslint-disable-line no-new
       .toThrow('Provide either a seed or a root, not both.')
     child.dispose()
@@ -83,7 +96,10 @@ describe('SeedSignerEvm', () => {
     const root = new SeedSignerEvm(VALID_SEED_PHRASE)
     root.dispose()
 
-    await expect(root.derive("0'/0/0")).rejects.toThrow('Cannot derive: this signer has no root')
+    const promise = root.derive("0'/0/0")
+
+    await expect(promise).rejects.toThrow(InvalidSignerError)
+    await expect(promise).rejects.toThrow('Cannot derive: this signer has no root')
   })
 
   test('should return the correct signature', async () => {
@@ -134,7 +150,10 @@ describe('SeedSignerEvm', () => {
     const root = new SeedSignerEvm(VALID_SEED_PHRASE)
     const child = await root.derive("0'/0/0")
 
-    await expect(child.derive("0'/0/1")).rejects.toThrow('Cannot derive: this signer has no root')
+    const promise = child.derive("0'/0/1")
+
+    await expect(promise).rejects.toThrow(InvalidSignerError)
+    await expect(promise).rejects.toThrow('Cannot derive: this signer has no root')
 
     child.dispose()
     root.dispose()
@@ -173,7 +192,10 @@ describe('PrivateKeySignerEvm', () => {
   test('should throw when calling derive', async () => {
     const signer = new PrivateKeySignerEvm(VALID_PRIVATE_KEY)
 
-    await expect(signer.derive()).rejects.toThrow('PrivateKeySignerEvm does not support derivation.')
+    const promise = signer.derive()
+
+    await expect(promise).rejects.toThrow(InvalidSignerError)
+    await expect(promise).rejects.toThrow('PrivateKeySignerEvm does not support derivation.')
 
     signer.dispose()
   })

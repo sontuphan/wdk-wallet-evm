@@ -83,7 +83,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {EvmTransaction} tx - The transaction to sign.
      * @returns {Promise<string>} The signed transaction as a hex string.
-     * @throws {Error} If a provider is set, and the transaction's cost surpasses the transaction max. fee option.
+     * @throws {MaximumFeeExceededError} If a provider is set, and the transaction's cost surpasses the transaction max. fee option.
      */
     signTransaction(tx: EvmTransaction): Promise<string>;
     /**
@@ -91,7 +91,9 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {EvmTransaction | string} tx - The transaction.
      * @returns {Promise<TransactionResult>} The transaction's result.
-     * @throws {Error} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+     * @throws {MaximumFeeExceededError} If the transaction's cost exceeds the maximum transaction fee option.
+     * @throws {ValueError} If the transaction mixes fee fields that its type doesn't support, or a type 3 transaction omits `maxFeePerBlobGas`.
      */
     sendTransaction(tx: EvmTransaction | string): Promise<TransactionResult>;
     /**
@@ -99,6 +101,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {EvmTransaction | string} tx - The transaction.
      * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      */
     quoteSendTransaction(tx: EvmTransaction | string): Promise<Omit<TransactionResult, "hash">>;
     /**
@@ -106,7 +109,8 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {EvmTransferOptions} options - The transfer's options.
      * @returns {Promise<TransferResult>} The transfer's result.
-     * @throws {Error} If the transfer's cost exceeds the maximum transfer fee option.
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+     * @throws {MaximumFeeExceededError} If the transfer's cost exceeds the maximum transfer fee option.
      */
     transfer(options: EvmTransferOptions): Promise<TransferResult>;
     /**
@@ -114,7 +118,8 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {ApproveOptions} options The approve options.
      * @returns {Promise<TransactionResult>} The transaction's result.
-     * @throws {Error} If trying to approve usdts on ethereum with allowance not equal to zero (due to the usdt allowance reset requirement).
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+     * @throws {ValueError} If trying to approve usdts on ethereum with allowance not equal to zero (due to the usdt allowance reset requirement).
      */
     approve(options: ApproveOptions): Promise<TransactionResult>;
     /**
@@ -139,6 +144,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm implement
      *
      * @param {string} delegateAddress - The address of the contract to delegate to.
      * @returns {Promise<TransactionResult>} The transaction result.
+     * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
      */
     delegate(delegateAddress: string): Promise<TransactionResult>;
     /**

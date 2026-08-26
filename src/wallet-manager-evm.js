@@ -14,7 +14,7 @@
 
 'use strict'
 
-import WalletManager from '@tetherto/wdk-wallet'
+import WalletManager, { InvalidSignerError, ProviderRequiredError } from '@tetherto/wdk-wallet'
 
 import { BrowserProvider, JsonRpcProvider } from 'ethers'
 
@@ -28,7 +28,7 @@ import SeedSignerEvm from './signers/seed-signer-evm.js'
 
 /** @typedef {import("@tetherto/wdk-wallet").FeeRates} FeeRates */
 /** @typedef {import("@tetherto/wdk-wallet").ISigner} ISigner */
-/** @typedef {import("@tetherto/wdk-wallet").InvalidSignerError} InvalidSignerError */
+/** @typedef {import("@tetherto/wdk-wallet").NoSuchElementError} NoSuchElementError */
 
 /** @typedef {import('./wallet-account-evm.js').EvmWalletConfig} EvmWalletConfig */
 
@@ -59,6 +59,7 @@ export default class WalletManagerEvm extends WalletManager {
    *
    * @param {string|Uint8Array|ISigner} seedOrSigner - A BIP-39 seed phrase, seed bytes, or a root signer. Root signers must be derivable — non-derivable signers (e.g. private-key signers) can only be registered by name via {@link addSigner}.
    * @param {EvmWalletConfig} [config] - The configuration object.
+   * @throws {InvalidSignerError} If the default signer doesn't support account derivation.
    */
   constructor (seedOrSigner, config = {}) {
     let signer = seedOrSigner
@@ -66,7 +67,7 @@ export default class WalletManagerEvm extends WalletManager {
       signer = new SeedSignerEvm(seedOrSigner)
     }
     if (!signer.isDerivable) {
-      throw new Error('The default signer must be derivable. Non-derivable signers (e.g. private-key signers) can only be registered by name via addSigner.')
+      throw new InvalidSignerError('The default signer must be derivable. Non-derivable signers (e.g. private-key signers) can only be registered by name via addSigner.')
     }
     super(signer, config)
 
@@ -117,7 +118,7 @@ export default class WalletManagerEvm extends WalletManager {
    * @param {Object} [options] - Account options.
    * @param {string} [options.signerName] - The signer name. Omit to use the default signer.
    * @returns {Promise<WalletAccountEvm>} The account.
-   * @throws {Error} If a signer name is given but no signer exists with that name.
+   * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
    * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    */
 
@@ -129,7 +130,7 @@ export default class WalletManagerEvm extends WalletManager {
    * @overload
    * @param {string} signerName - The signer name registered via {@link addSigner}.
    * @returns {Promise<WalletAccountEvm>} The account.
-   * @throws {Error} If no signer exists with the given name.
+   * @throws {NoSuchElementError} If no signer exists with the given name.
    */
 
   async getAccount (indexOrSignerName = 0, options = {}) {
@@ -158,7 +159,7 @@ export default class WalletManagerEvm extends WalletManager {
    * @param {Object} [options] - Account options.
    * @param {string} [options.signerName] - The signer name. Omit to use the default signer.
    * @returns {Promise<WalletAccountEvm>} The account.
-   * @throws {Error} If a signer name is given but no signer exists with that name.
+   * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
    * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    */
   async getAccountByPath (path, options = {}) {
@@ -178,10 +179,11 @@ export default class WalletManagerEvm extends WalletManager {
    * Returns the current fee rates.
    *
    * @returns {Promise<FeeRates>} The fee rates (in weis).
+   * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
    */
   async getFeeRates () {
     if (!this._provider) {
-      throw new Error('The wallet must be connected to a provider to get fee rates.')
+      throw new ProviderRequiredError('The wallet must be connected to a provider to get fee rates.')
     }
 
     const data = await this._provider.getFeeData()
