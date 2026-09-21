@@ -268,6 +268,29 @@ describe('WalletAccountEvm', () => {
 
       expect(signedTx).toBeTruthy()
     })
+
+    test('should throw if a transaction is explicitly typed as a blob transaction', async () => {
+      const promise = account.signTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        type: 3
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
+    })
+
+    test('should throw if a transaction carries blob fields', async () => {
+      const promise = account.signTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        maxFeePerBlobGas: 1_000_000_000,
+        blobVersionedHashes: ['0x' + '01'.repeat(32)]
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
+    })
   })
 
   describe('sendTransaction', () => {
@@ -355,28 +378,27 @@ describe('WalletAccountEvm', () => {
       await expect(promise).rejects.toThrow('pre-eip-1559 transaction does not support maxFeePerGas/maxPriorityFeePerGas')
     })
 
-    test('should throw if a blob transaction also sets a gas price', async () => {
+    test('should throw if a transaction is explicitly typed as a blob transaction', async () => {
       const promise = account.sendTransaction({
         to: SPENDER_ADDRESS,
         value: 1_000,
-        type: 3,
-        gasPrice: 1_000_000_000
+        type: 3
       })
 
       await expect(promise).rejects.toThrow(ValueError)
-      await expect(promise).rejects.toThrow('blob transaction does not support gasPrice')
+      await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
     })
 
-    test('should throw if a blob transaction omits the max fee per blob gas', async () => {
+    test('should throw if a transaction carries blob fields', async () => {
       const promise = account.sendTransaction({
         to: SPENDER_ADDRESS,
         value: 1_000,
-        type: 3,
+        maxFeePerBlobGas: 1_000_000_000,
         blobVersionedHashes: ['0x' + '01'.repeat(32)]
       })
 
       await expect(promise).rejects.toThrow(ValueError)
-      await expect(promise).rejects.toThrow('maxFeePerBlobGas is required for type 3 transactions')
+      await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
     })
   })
 
