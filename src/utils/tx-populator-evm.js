@@ -40,18 +40,19 @@ import { Signature, toQuantity } from 'ethers'
  */
 
 /**
- * Asserts that the given transaction is not an EIP-4844 (type 3) blob transaction.
+ * Whether the given transaction is an EIP-4844 (type 3) blob transaction.
  *
- * @param {UnsignedEvmTransaction} tx - The transaction to check.
- * @returns {void}
- * @throws {ValueError} If the transaction explicitly targets type 3, or carries any blob field.
+ * @param {UnsignedEvmTransaction} tx - The transaction to inspect.
+ * @returns {boolean} True if the transaction explicitly targets type 3, or carries any blob field.
  */
-export function assertNotBlobTransaction (tx) {
-  const hasBlobs = (tx.blobs != null || tx.blobVersionedHashes != null || tx.maxFeePerBlobGas != null)
+export function isBlobTransaction (tx) {
+  const hasBlobs = (
+    ('blobs' in tx && tx.blobs != null) ||
+    ('blobVersionedHashes' in tx && tx.blobVersionedHashes != null) ||
+    ('maxFeePerBlobGas' in tx && tx.maxFeePerBlobGas != null)
+  )
 
-  if (Number(tx.type) === 3 || hasBlobs) {
-    throw new ValueError('eip-4844 blob transactions are not supported')
-  }
+  return Number(tx.type) === 3 || hasBlobs
 }
 
 /**
@@ -85,7 +86,9 @@ export async function populateTransactionEvm (provider, from, tx) {
   if ((explicitType === 0 || explicitType === 1) && has1559) {
     throw new ValueError('pre-eip-1559 transaction does not support maxFeePerGas/maxPriorityFeePerGas')
   }
-  assertNotBlobTransaction(tx)
+  if (isBlobTransaction(tx)) {
+    throw new ValueError('eip-4844 blob transactions are not supported')
+  }
 
   const feeData = await provider.getFeeData()
 

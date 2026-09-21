@@ -58,13 +58,12 @@ export type UnsignedEvmTransaction = {
 export type Provider = import("ethers").Provider;
 export type AuthorizationLike = import("ethers").AuthorizationLike;
 /**
- * Asserts that the given transaction is not an EIP-4844 (type 3) blob transaction.
+ * Whether the given transaction is an EIP-4844 (type 3) blob transaction.
  *
- * @param {UnsignedEvmTransaction} tx - The transaction to check.
- * @returns {void}
- * @throws {ValueError} If the transaction explicitly targets type 3, or carries any blob field.
+ * @param {UnsignedEvmTransaction} tx - The transaction to inspect.
+ * @returns {boolean} True if the transaction explicitly targets type 3, or carries any blob field.
  */
-export function assertNotBlobTransaction(tx: UnsignedEvmTransaction): void;
+export function isBlobTransaction(tx: UnsignedEvmTransaction): boolean;
 /**
  * Build a fully populated unsigned transaction ready for signing.
  *

@@ -22,7 +22,7 @@ import WalletAccountReadOnlyEvm from './wallet-account-read-only-evm.js'
 
 import SeedSignerEvm from './signers/seed-signer-evm.js'
 import PrivateKeySignerEvm from './signers/private-key-signer-evm.js'
-import { assertNotBlobTransaction, populateTransactionEvm } from './utils/tx-populator-evm.js'
+import { isBlobTransaction, populateTransactionEvm } from './utils/tx-populator-evm.js'
 
 /** @typedef {import('./signers/seed-signer-evm.js').ISignerEvm} ISignerEvm */
 /** @typedef {import('ethers').HDNodeWallet} HDNodeWallet */
@@ -178,7 +178,9 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
    * @throws {MaximumFeeExceededError} If a provider is set, and the transaction's cost surpasses the transaction max. fee option.
    */
   async signTransaction (tx) {
-    assertNotBlobTransaction(tx)
+    if (isBlobTransaction(tx)) {
+      throw new ValueError('eip-4844 blob transactions are not supported')
+    }
 
     if (this._provider && this._config.transactionMaxFee !== undefined) {
       const { fee } = await this.quoteSendTransaction(tx)
@@ -230,6 +232,7 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
    * @param {EvmTransaction | string} tx - The transaction, or a signed raw transaction as a hex string.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
    * @throws {ProviderRequiredError} If the wallet is not connected to a provider.
+   * @throws {ValueError} If the transaction is an EIP-4844 (type 3) blob transaction.
    */
   async quoteSendTransaction (tx) {
     if (typeof tx === 'string') {
@@ -237,7 +240,13 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
         throw new ProviderRequiredError('The wallet must be connected to a provider to quote send transaction operations.')
       }
 
-      const { from, to, value, data, gasLimit, gasPrice, maxFeePerGas, maxPriorityFeePerGas, type, nonce, chainId, authorizationList } = Transaction.from(tx)
+      const parsedTx = Transaction.from(tx)
+
+      if (isBlobTransaction(parsedTx)) {
+        throw new ValueError('eip-4844 blob transactions are not supported')
+      }
+
+      const { from, to, value, data, gasLimit, gasPrice, maxFeePerGas, maxPriorityFeePerGas, type, nonce, chainId, authorizationList } = parsedTx
 
       const transaction = { from, to, value, data, gasLimit, gasPrice, maxFeePerGas, maxPriorityFeePerGas, type, nonce, chainId, authorizationList }
 
