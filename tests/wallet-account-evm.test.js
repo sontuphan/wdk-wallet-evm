@@ -428,6 +428,17 @@ describe('WalletAccountEvm', () => {
       await expect(promise).rejects.toThrow(ValueError)
       await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
     })
+
+    test('should throw if quoting a blob transaction', async () => {
+      const promise = account.quoteSendTransaction({
+        to: SPENDER_ADDRESS,
+        value: 1_000,
+        type: 3
+      })
+
+      await expect(promise).rejects.toThrow(ValueError)
+      await expect(promise).rejects.toThrow('eip-4844 blob transactions are not supported')
+    })
   })
 
   describe('transfer', () => {

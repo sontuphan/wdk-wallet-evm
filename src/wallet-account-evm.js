@@ -261,6 +261,10 @@ export default class WalletAccountEvm extends WalletAccountReadOnlyEvm {
       return { fee: gas * feeRate }
     }
 
+    if (isBlobTransaction(tx)) {
+      throw new ValueError('eip-4844 blob transactions are not supported')
+    }
+
     return await super.quoteSendTransaction(tx)
   }
 

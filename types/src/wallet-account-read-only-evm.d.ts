@@ -235,7 +235,7 @@ export type EvmTransaction = {
      */
     maxPriorityFeePerGas?: number | bigint;
     /**
-     * - The transaction type (e.g. 4 for ERC-7702).
+     * - The [EIP-2718](https://eips.ethereum.org/EIPS/eip-2718) transaction type: 0 for legacy, 1 for [EIP-2930](https://eips.ethereum.org/EIPS/eip-2930) access-list, 2 for [EIP-1559](https://eips.ethereum.org/EIPS/eip-1559), 4 for ERC-7702. Type 3 ([EIP-4844](https://eips.ethereum.org/EIPS/eip-4844) blob transactions) is not supported and is rejected. Omit to have the type inferred from the transaction's fields and the network's fee data.
      */
     type?: number;
     /**
